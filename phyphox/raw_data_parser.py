@@ -1,13 +1,15 @@
+# Imports
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from copy import copy
-from typing import LiteralString
+
 
 # Path to the test folder
 folder_path_: str = "/Users/lucas1/Downloads/Gyroskop Drehrate 2024-08-20 21-51-53"
 
 
+# Class to store the data and to provide the functionalities for access and visualization
 class PhyPhoxData:
     def __init__(self, folder_path: str):
         # Safe the path to the folder in case the metadata is needed later on
@@ -50,7 +52,8 @@ class PhyPhoxData:
             plt.plot(self.get_time_data(), self.get_x_data())
             plt.show()
 
-
+ 
+# Small demonstration
 my_data = PhyPhoxData(folder_path_)
 
 print(my_data.plot_data('x'))
