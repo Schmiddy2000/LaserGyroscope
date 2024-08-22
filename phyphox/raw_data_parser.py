@@ -56,4 +56,4 @@ class PhyPhoxData:
 # Small demonstration
 my_data = PhyPhoxData(folder_path_)
 
-print(my_data.plot_data('x'))
+# print(my_data.plot_data('x'))
