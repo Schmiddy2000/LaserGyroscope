@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from copy import copy
+from pathlib import Path
 
 
 # Path to the test folder
@@ -11,12 +12,24 @@ folder_path_: str = "/Users/lucas1/Downloads/Gyroskop Drehrate 2024-08-20 21-51-
 
 # Class to store the data and to provide the functionalities for access and visualization
 class PhyPhoxData:
-    def __init__(self, folder_path: str):
+    def __init__(self, folder_path: str | Path):
         # Safe the path to the folder in case the metadata is needed later on
         self.folder_path = folder_path
 
+        # Store the name of the file and check the data type
+        if isinstance(folder_path, str):
+            self.name = folder_path.split("/")[-1]
+        elif isinstance(folder_path, Path):
+            self.name = folder_path.parts[-1]
+        else:
+            print("folder_name has to be of type string or Path")
+            exit(1)
+
         # Store the raw data as a dataframe
-        self.data = pd.read_csv(folder_path + "/Raw Data.csv")
+        if isinstance(folder_path, str):
+            self.data = pd.read_csv(folder_path + "/Raw Data.csv")
+        elif isinstance(folder_path, Path):
+            self.data = pd.read_csv(folder_path / "Raw Data.csv")
 
     def experiment_duration(self):
         return np.max(self.data['Time (s)'].to_numpy())
@@ -54,6 +67,6 @@ class PhyPhoxData:
 
  
 # Small demonstration
-my_data = PhyPhoxData(folder_path_)
+# my_data = PhyPhoxData(folder_path_)
 
 # print(my_data.plot_data('x'))
