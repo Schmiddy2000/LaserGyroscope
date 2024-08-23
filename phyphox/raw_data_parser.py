@@ -72,15 +72,6 @@ class PhyPhoxData:
             raise ValueError(f"Parameter axis is {axis}, but should be one of 't', 'x', 'y', 'z' or 'a'.")
 
     def set_time_window(self, start_time: float, end_time: float, reset_time: bool = True):
-        """
-        Set the data to only a portion of the initial duration.
-
-        Parameters:
-        - start_time: float, the beginning of the time window (in seconds).
-        - end_time: float, the end of the time window (in seconds).
-        - return: bool, if True, resets the time to start from 0 within the window.
-        """
-
         # Filter the data based on the time window
         mask = (self.data['Time (s)'] >= start_time) & (self.data['Time (s)'] <= end_time)
         self.data = self.data.loc[mask].reset_index(drop=True)
@@ -93,32 +84,16 @@ class PhyPhoxData:
         return self.data
 
     def linear_fit(self, x_column: str, y_column: str):
-        """
-        Perform a linear fit to the specified data columns using SciPy.
-
-        Parameters:
-        - x_column: str, the name of the column to use as the independent variable (x-axis).
-        - y_column: str, the name of the column to use as the dependent variable (y-axis).
-
-        Returns:
-        - popt: tuple, the slope and intercept of the linear fit.
-        - pcov: 2x2 array, the estimated covariance of popt.
-        """
         x_data = self.axis_data(x_column)
         y_data = self.axis_data(y_column)
 
-        # Define a linear function
         def linear_model(x, m, b):
             return m * x + b
 
-        # Perform the curve fitting
         popt, pcov = curve_fit(linear_model, x_data, y_data)
+        perr = np.sqrt(np.diag(pcov))  # Standard errors
+        return popt, perr
 
-        # popt contains [slope, intercept], pcov is the covariance matrix
-        return popt, pcov
-
-    # Enhance the automatic layout for less than 4 plots
-    # Enhance the fitting functions
     def plot(self, axis: str, fit: bool = False):
         if axis == 'all':
             axis = 'xyza'
@@ -132,40 +107,53 @@ class PhyPhoxData:
         num_plots = len(axis)
         fig = plt.figure(figsize=(12, 8))
 
-        for i, ax in enumerate(axis):
-            if num_plots == 3 and i == 2:
-                ax_idx = plt.subplot2grid((2, 2), (1, 0), colspan=2)
-            else:
-                ax_idx = plt.subplot2grid((2, 2), divmod(i, 2))
+        # Maybe make this more concise with a list comprehension
+        if num_plots == 1:
+            ax_idx = [plt.subplot2grid((1, 1), (0, 0))]
+        elif num_plots == 2:
+            ax_idx = [plt.subplot2grid((2, 1), (0, 0)),
+                      plt.subplot2grid((2, 1), (1, 0))]
+        elif num_plots == 3:
+            ax_idx = [plt.subplot2grid((2, 2), (0, 0)),
+                      plt.subplot2grid((2, 2), (0, 1)),
+                      plt.subplot2grid((2, 2), (1, 0), colspan=2)]
+        elif num_plots == 4:
+            ax_idx = [plt.subplot2grid((2, 2), (0, 0)),
+                      plt.subplot2grid((2, 2), (0, 1)),
+                      plt.subplot2grid((2, 2), (1, 0)),
+                      plt.subplot2grid((2, 2), (1, 1))]
+        else:
+            raise ValueError("Axis should contain 1 to 4 characters.")
 
-            # Get the data to be plotted
+        for i, ax in enumerate(axis):
             time_data = self.time_data()
             y_data = self.axis_data(ax)
 
-            # Create the actual plot
-            ax_idx.plot(time_data, y_data, label='Data')
-            ax_idx.set_title(f'Gyroscope {ax.upper()} Data')
-            ax_idx.set_xlabel('Time (s)')
-            ax_idx.set_ylabel(f'{ax.upper()} (rad/s)')
+            ax_idx[i].plot(time_data, y_data, label='Data')
+            ax_idx[i].set_title(f'Gyroscope {ax.upper()} Data')
+            ax_idx[i].set_xlabel('Time (s)')
+            ax_idx[i].set_ylabel(f'{ax.upper()} (rad/s)')
 
             if fit:
                 # Perform the linear fit
-                popt, pcov = self.linear_fit('t', ax)
+                popt, perr = self.linear_fit('t', ax)
                 slope, intercept = popt
+                slope_err, intercept_err = perr
 
                 # Calculate the fit line
                 fit_line = slope * time_data + intercept
 
-                # Calculate uncertainty bounds
-                perr = np.sqrt(np.diag(pcov))
-                lower_bound = fit_line - perr[0] * time_data - perr[1]
-                upper_bound = fit_line + perr[0] * time_data + perr[1]
+                # Calculate the upper and lower bounds using fixed errors
+                lower_bound = (slope - slope_err) * time_data + (intercept - intercept_err)
+                upper_bound = (slope + slope_err) * time_data + (intercept + intercept_err)
 
-                # Plot the fit line
-                ax_idx.plot(time_data, fit_line, color='red', label=f'Fit: y={slope:.3f}x + {intercept:.3f}')
-                ax_idx.fill_between(time_data, lower_bound, upper_bound, color='red', alpha=0.3, label='Uncertainty')
+                # Plot the fit line and error bounds
+                ax_idx[i].plot(time_data, fit_line, color='red', label=f'Fit: y={slope:.3f}x + {intercept:.3f}')
+                # ax_idx[i].plot(time_data, lower_bound, color='gray', linestyle='--', label='Lower Bound')
+                # ax_idx[i].plot(time_data, upper_bound, color='gray', linestyle='--', label='Upper Bound')
+                ax_idx[i].fill_between(time_data, lower_bound, upper_bound, color='red', alpha=0.3, label='Confidence Interval')
 
-            ax_idx.legend()
+            ax_idx[i].legend()
 
         plt.tight_layout()
         plt.show()
