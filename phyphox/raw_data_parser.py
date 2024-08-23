@@ -6,14 +6,12 @@ from copy import copy
 from pathlib import Path
 
 
-# Path to the test folder
-folder_path_: str = "/Users/lucas1/Downloads/Gyroskop Drehrate 2024-08-20 21-51-53"
-
-
 # Class to store the data and to provide the functionalities for access and visualization
+# Possible improvements:
+# - Add a fit function, which can then also be used in the plot function
 class PhyPhoxData:
     def __init__(self, folder_path: str | Path):
-        # Safe the path to the folder in case the metadata is needed later on
+        # Save the path to the folder in case the metadata is needed later on
         self.folder_path = folder_path
 
         # Store the name of the file and check the data type
@@ -31,7 +29,7 @@ class PhyPhoxData:
         elif isinstance(folder_path, Path):
             self.data = pd.read_csv(folder_path / "Raw Data.csv")
 
-    def experiment_duration(self):
+    def duration(self):
         return np.max(self.data['Time (s)'].to_numpy())
 
     def data_points(self):
@@ -43,30 +41,67 @@ class PhyPhoxData:
     def get_dataframe(self):
         return copy(self.data)
 
-    def get_time_data(self):
+    def time_data(self):
         return self.data['Time (s)'].to_numpy()
 
-    def get_x_data(self):
+    def x_data(self):
         return self.data['Gyroscope x (rad/s)'].to_numpy()
 
-    def get_y_data(self):
+    def y_data(self):
         return self.data['Gyroscope y (rad/s)'].to_numpy()
 
-    def get_z_data(self):
+    def z_data(self):
         return self.data['Gyroscope z (rad/s)'].to_numpy()
 
-    def get_absolute_data(self):
+    def absolute_data(self):
         return self.data['Absolute (rad/s)'].to_numpy()
 
-    def plot_data(self, axis: str):
-        # Set up the plot here. Use subplots depending on the length of 'axis'.
+    # Possible improvements:
+    # - Add lists for titles, axis descriptions, etc. to make the code less repetitive
+    def plot(self, axis: str):
+        # Check if 'axis' is 'all'
+        if axis == 'all':
+            axis = 'xyza'
 
-        if 'x' in axis:
-            plt.plot(self.get_time_data(), self.get_x_data())
-            plt.show()
+        # Validate the 'axis' input
+        valid_axes = {'x', 'y', 'z', 'a'}
+        if any(char not in valid_axes for char in axis):
+            raise ValueError("Invalid character in axis. Allowed characters are 'x', 'y', 'z', and 'a'.")
+        if len(set(axis)) != len(axis):
+            raise ValueError("Duplicate characters in axis. Each axis should only be specified once.")
 
- 
-# Small demonstration
-# my_data = PhyPhoxData(folder_path_)
+        # Compute the number of plots that need to be drawn
+        num_plots = len(axis)
 
-# print(my_data.plot_data('x'))
+        # Create a 2x2 grid for plotting
+        fig = plt.figure(figsize=(12, 8))
+
+        for i, ax in enumerate(axis):
+            if num_plots == 3 and i == 2:  # Special case: third plot spans entire bottom row
+                ax_idx = plt.subplot2grid((2, 2), (1, 0), colspan=2)
+            else:
+                ax_idx = plt.subplot2grid((2, 2), divmod(i, 2))
+
+            if ax == 'x':
+                ax_idx.plot(self.time_data(), self.x_data())
+                ax_idx.set_title('Gyroscope X Data')
+                ax_idx.set_xlabel('Time (s)')
+                ax_idx.set_ylabel('X (rad/s)')
+            elif ax == 'y':
+                ax_idx.plot(self.time_data(), self.y_data())
+                ax_idx.set_title('Gyroscope Y Data')
+                ax_idx.set_xlabel('Time (s)')
+                ax_idx.set_ylabel('Y (rad/s)')
+            elif ax == 'z':
+                ax_idx.plot(self.time_data(), self.z_data())
+                ax_idx.set_title('Gyroscope Z Data')
+                ax_idx.set_xlabel('Time (s)')
+                ax_idx.set_ylabel('Z (rad/s)')
+            elif ax == 'a':
+                ax_idx.plot(self.time_data(), self.absolute_data())
+                ax_idx.set_title('Absolute Gyroscope Data')
+                ax_idx.set_xlabel('Time (s)')
+                ax_idx.set_ylabel('Absolute (rad/s)')
+
+        plt.tight_layout()
+        plt.show()
