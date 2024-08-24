@@ -83,9 +83,9 @@ class PhyPhoxData:
         # Optional: You could return the filtered DataFrame if needed
         return self.data
 
-    def linear_fit(self, x_column: str, y_column: str):
-        x_data = self.axis_data(x_column)
-        y_data = self.axis_data(y_column)
+    def linear_fit(self, axis: str):
+        x_data = self.axis_data('t')
+        y_data = self.axis_data(axis)
 
         def linear_model(x, m, b):
             return m * x + b
@@ -136,7 +136,7 @@ class PhyPhoxData:
 
             if fit:
                 # Perform the linear fit
-                popt, perr = self.linear_fit('t', ax)
+                popt, perr = self.linear_fit(ax)
                 slope, intercept = popt
                 slope_err, intercept_err = perr
 
