@@ -94,7 +94,7 @@ class PhyPhoxData:
         perr = np.sqrt(np.diag(pcov))  # Standard errors
         return popt, perr
 
-    def plot(self, axis: str, fit: bool = False):
+    def plot(self, axis: str, fit: bool = False, show: bool = True):
         if axis == 'all':
             axis = 'xyza'
 
@@ -156,4 +156,6 @@ class PhyPhoxData:
             ax_idx[i].legend()
 
         plt.tight_layout()
-        plt.show()
+
+        if show == True:
+            plt.show()
